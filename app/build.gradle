@@ -1,0 +1,88 @@
+apply plugin: 'com.android.application'
+
+
+android {
+    compileSdkVersion rootProject.ext.compileSdkVersion
+    buildToolsVersion rootProject.ext.buildToolsVersion
+
+    defaultConfig {
+        applicationId "com.iflytek.ainote.plugin.explicit"
+        minSdkVersion rootProject.ext.minSdkVersion
+        targetSdkVersion rootProject.ext.targetSdkVersion
+        versionCode 4
+        versionName "1.4"
+        println("---------------------------isPlugin = ${rootProject.isPlugin}")
+        buildConfigField("boolean", "isPlugin", "${rootProject.isPlugin}")
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+
+    signingConfigs {
+        sign {
+            if (propChannel == 'x1') {
+                keyAlias 'platform'
+                keyPassword 'android'
+                storeFile file('../../../lib/gw_platform.keystore')
+                storePassword 'android'
+            } else if (propChannel == 't1') {
+                keyAlias 'android'
+                keyPassword 'android'
+                storeFile file('../../../lib/keystore_8768.jks')
+                storePassword 'android'
+            }
+        }
+    }
+
+
+    buildTypes {
+        release {
+            signingConfig signingConfigs.sign
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+        debug {
+            signingConfig signingConfigs.sign
+        }
+    }
+
+}
+
+apply plugin: 'replugin-plugin-gradle'
+configurations {//release
+    if (rootProject.isPlugin) {
+        print '----------------------------------------'
+        print '插件化，进行support-v4剔除工作'
+        all*.exclude group: 'com.android.support', module: 'support-fragment'
+        all*.exclude group: 'com.android.support', module: 'viewpager'
+    }
+}
+
+dependencies {
+//    implementation fileTree(dir: 'libs', include: ['*.jar'])
+    println("\nrootProject.isPlugin=======" + rootProject.isPlugin)
+    if (rootProject.isPlugin) {
+        compileOnly files('libs/fragment.jar')//这个jar就是从Support-fragment中提取出来的并非特制包目的是为了骗过编译期
+        compileOnly files('libs/common-utils-lib-1.0.0.jar') //这个jar就是从Host的utils中编译生成的，其目的是为了骗过编译期
+
+    } else {
+        implementation rootProject.ext.dependencies["support-v4"]
+        implementation rootProject.ext.dependencies["annotations"]
+        implementation rootProject.ext.dependencies["constraint-layout"]
+
+    }
+    testImplementation 'junit:junit:4.12'
+    implementation 'com.qihoo360.replugin:replugin-plugin-lib:2.2.4'
+    implementation 'com.alibaba:fastjson:1.1.46.android'
+    implementation rootProject.ext.dependencies["appcompat-v7"]
+
+
+}
+
+repluginPluginConfig {
+    //插件名
+    pluginName = "san_yu"
+    //宿主app的包名
+    hostApplicationId = "com.iflytek.ainote.launcher"
+    //宿主app的启动activity
+    hostAppLauncherActivity = "com.iflytek.ainote.launcher.ui.activity.MainActivity"
+}
